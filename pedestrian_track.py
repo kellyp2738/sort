@@ -54,7 +54,6 @@ def log_reader(filepath):
         'dx',
         'dy',
     ]
-    print(filepath)
     seq_dets = pd.read_csv(filepath)
     seq_dets.columns = yolo_log_columns
     ped_dets = seq_dets[(seq_dets['class_label'] == 0) & (seq_dets['class_confidence'] > 50)]
@@ -112,7 +111,6 @@ def launch_tracker(data_dir, age, hits, threshold, outdir):
 
     # find yolo logfiles
     file_paths = find_files(parent_dir=data_dir)
-    print(file_paths)
 
     # configure parallel run based on compute environment
     avail_cpus = mp.cpu_count()
