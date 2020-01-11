@@ -168,4 +168,4 @@ if __name__ == '__main__':
     if not os.path.exists(opts.out_dir):
         os.makedirs(opts.out_dir)
 
-    launch_tracker(opts.parent_dir, opts.max_age, opts.min_hits, opts.iou_threshold, opts.out_dir)
+    launch_tracker(opts.parent_dir, int(opts.max_age), int(opts.min_hits), float(opts.iou_threshold), opts.out_dir)
