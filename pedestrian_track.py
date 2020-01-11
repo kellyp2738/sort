@@ -54,6 +54,7 @@ def log_reader(filepath):
         'dx',
         'dy',
     ]
+    print(filepath)
     seq_dets = pd.read_csv(filepath)
     seq_dets.columns = yolo_log_columns
     ped_dets = seq_dets[(seq_dets['class_label'] == 0) & (seq_dets['class_confidence'] > 50)]
