@@ -152,7 +152,7 @@ if __name__ == '__main__':
         help='max_age parameter for SORT'
     )
     parser.add_argument(
-        '-h',
+        '-m',
         '--min_hits',
         help='min_hits parameter for SORT'
     )
