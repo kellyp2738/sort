@@ -110,7 +110,7 @@ def tracker_workflow(data_path, age, hits, threshold, outdir):
 def launch_tracker(data_dir, age, hits, threshold, outdir):
 
     # find yolo logfiles
-    file_paths = find_files(parent_dir=data_dir) # this is a dictionary
+    file_paths = find_files(parent_dir=data_dir)
 
     # configure parallel run based on compute environment
     avail_cpus = mp.cpu_count()
@@ -121,7 +121,7 @@ def launch_tracker(data_dir, age, hits, threshold, outdir):
 
     # assemble parallel tasks
     pool = mp.Pool(req_cpus)
-    parallel_tasks = [(f, age, hits, threshold, outdir) for f in file_paths.items()]
+    parallel_tasks = [(f, age, hits, threshold, outdir) for f in file_paths]
     results = [pool.apply_async(tracker_workflow, p) for p in parallel_tasks]
     pool.close()
 
