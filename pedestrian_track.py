@@ -112,6 +112,7 @@ def launch_tracker(data_dir, age, hits, threshold, outdir):
 
     # find yolo logfiles
     file_paths = find_files(parent_dir=data_dir)
+    print(file_paths)
 
     # configure parallel run based on compute environment
     avail_cpus = mp.cpu_count()
