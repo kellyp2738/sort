@@ -102,9 +102,10 @@ def ped_tracker(ped_data, age, hits, threshold):
 def tracker_workflow(data_path, age, hits, threshold, outdir):
 
     data = log_reader(data_path)
-    tracks = ped_tracker(data, age, hits, threshold)
-    save_name = generate_track_filename(data_path)
-    tracks.to_csv(os.path.join(outdir, save_name))
+    if data is not None:
+        tracks = ped_tracker(data, age, hits, threshold)
+        save_name = generate_track_filename(data_path)
+        tracks.to_csv(os.path.join(outdir, save_name))
 
 
 def launch_tracker(data_dir, age, hits, threshold, outdir):
