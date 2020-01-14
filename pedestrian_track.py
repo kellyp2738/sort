@@ -57,8 +57,10 @@ def log_reader(filepath):
     seq_dets = pd.read_csv(filepath)
     seq_dets.columns = yolo_log_columns
     ped_dets = seq_dets[(seq_dets['class_label'] == 0) & (seq_dets['class_confidence'] > 50)]
-
-    return ped_dets
+    if ped_dets.shape[0] > 0:
+        return ped_dets
+    else:
+        return None
 
 
 def ped_tracker(ped_data, age, hits, threshold):
@@ -118,7 +120,7 @@ def launch_tracker(data_dir, age, hits, threshold, outdir):
     if avail_cpus == 272:
         req_cpus = 64 # no hyperthreading on stampede 2
     else:
-        req_cpus = 1  # avail_cpus-2  # if running locally, save some processing power for other stuff
+        req_cpus = avail_cpus  # if running locally, save some processing power for other stuff
 
     # assemble parallel tasks
     pool = mp.Pool(req_cpus)
