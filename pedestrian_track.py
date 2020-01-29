@@ -63,6 +63,45 @@ def log_reader(filepath):
         return None
 
 
+def parallel_ped_tracker(ped_data, age, hits, threshold):
+
+    total_time = 0.0
+    total_frames = 0
+
+    # create instance of the SORT tracker
+    mot_tracker = Sort(
+        max_age=age,
+        min_hits=hits,
+        iou_threshold=threshold
+    )
+
+    tracks = []
+    track_count = 0
+    for f in range(1, int(ped_data['frame_idx'].max())):
+
+        frame_dets = ped_data[ped_data['frame_idx'] == f]
+
+        dets = frame_dets[['x_min', 'y_min', 'x_max', 'y_max']].values
+        total_frames += 1
+
+        start_time = time.time()
+        track_count, trackers = mot_tracker.update(dets, track_count)
+        cycle_time = time.time() - start_time
+        total_time += cycle_time
+
+        for t in trackers.tolist():
+            tracks.append(
+                {'frame_idx': f, 'x_min': t[0], 'y_min': t[1], 'x_max': t[2], 'y_max': t[3], 'track_idx': t[4]}
+            )
+
+    # organize track outputs
+    tracks_df = pd.DataFrame.from_dict(tracks)
+    tracks_df['x_center'] = [(row['x_max'] + row['x_min']) / 2 for i, row in tracks_df.iterrows()]
+    tracks_df['y_center'] = [(row['y_max'] + row['y_min']) / 2 for i, row in tracks_df.iterrows()]
+
+    return tracks_df
+
+
 def ped_tracker(ped_data, age, hits, threshold):
 
     total_time = 0.0
@@ -105,7 +144,7 @@ def tracker_workflow(data_path, age, hits, threshold, outdir):
 
     data = log_reader(data_path)
     if data is not None:
-        tracks = ped_tracker(data, age, hits, threshold)
+        tracks = parallel_ped_tracker(data, age, hits, threshold)
         save_name = generate_track_filename(data_path)
         tracks.to_csv(os.path.join(outdir, save_name))
 

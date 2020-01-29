@@ -139,6 +139,67 @@ class KalmanBoxTracker(object):
         return convert_x_to_bbox(self.kf.x)
 
 
+class ParallelKalmanBoxTracker(object):
+    """
+    This class represents the internel state of individual tracked objects observed as bbox.
+    """
+
+    def __init__(self, bbox, track_id):
+        """
+        Initialises a tracker using initial bounding box.
+        """
+        # define constant velocity model
+        self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        self.kf.F = np.array(
+            [[1, 0, 0, 0, 1, 0, 0], [0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0, 1], [0, 0, 0, 1, 0, 0, 0],
+             [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]])
+        self.kf.H = np.array(
+            [[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]])
+
+        self.kf.R[2:, 2:] *= 10.
+        self.kf.P[4:, 4:] *= 1000.  # give high uncertainty to the unobservable initial velocities
+        self.kf.P *= 10.
+        self.kf.Q[-1, -1] *= 0.01
+        self.kf.Q[4:, 4:] *= 0.01
+
+        self.kf.x[:4] = convert_bbox_to_z(bbox)
+        self.time_since_update = 0
+        self.id = track_id
+        self.history = []
+        self.hits = 0
+        self.hit_streak = 0
+        self.age = 0
+
+    def update(self, bbox):
+        """
+        Updates the state vector with observed bbox.
+        """
+        self.time_since_update = 0
+        self.history = []
+        self.hits += 1
+        self.hit_streak += 1
+        self.kf.update(convert_bbox_to_z(bbox))
+
+    def predict(self):
+        """
+        Advances the state vector and returns the predicted bounding box estimate.
+        """
+        if (self.kf.x[6] + self.kf.x[2]) <= 0:
+            self.kf.x[6] *= 0.0
+        self.kf.predict()
+        self.age += 1
+        if self.time_since_update > 0:
+            self.hit_streak = 0
+        self.time_since_update += 1
+        self.history.append(convert_x_to_bbox(self.kf.x))
+        return self.history[-1]
+
+    def get_state(self):
+        """
+        Returns the current bounding box estimate.
+        """
+        return convert_x_to_bbox(self.kf.x)
+
 def associate_detections_to_trackers(detections, trackers, iou_threshold):
     """
     Assigns detections to tracked object (both represented as bounding boxes)
@@ -190,7 +251,7 @@ class Sort(object):
         self.trackers = []
         self.frame_count = 0
 
-    def update(self, dets):
+    def update(self, dets, count=None):
         """
         Params:
           dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
@@ -221,9 +282,16 @@ class Sort(object):
                 trk.update(dets[d, :][0])
 
         # create and initialise new trackers for unmatched detections
-        for i in unmatched_dets:
-            trk = KalmanBoxTracker(dets[i, :])
-            self.trackers.append(trk)
+        if count is not None:
+            for i in unmatched_dets:
+                trk = ParallelKalmanBoxTracker(dets[i, :], count)
+                count += 1
+                self.trackers.append(trk)
+        else:
+            for i in unmatched_dets:
+                trk = KalmanBoxTracker(dets[i, :])
+                self.trackers.append(trk)
+
         i = len(self.trackers)
         for trk in reversed(self.trackers):
             d = trk.get_state()[0]
@@ -234,8 +302,8 @@ class Sort(object):
             if (trk.time_since_update > self.max_age):
                 self.trackers.pop(i)
         if (len(ret) > 0):
-            return np.concatenate(ret)
-        return np.empty((0, 5))
+            return count, np.concatenate(ret)
+        return count, np.empty((0, 5))
 
 
 def parse_args():
